@@ -3,9 +3,14 @@ from api_client import APIClient
 from metrics import MetricsHandler
 import threading
 import time
+import os
 
 app = Flask(__name__)
-api_client = APIClient('http://localhost:4414')
+api_client = APIClient(
+    'http://localhost:4414',
+    os.environ.get('ACE_USERNAME'),
+    os.environ.get('ACE_PASSWORD')
+)
 uri_server = "/apiv2/servers"
 metrics_handler = MetricsHandler()
 
