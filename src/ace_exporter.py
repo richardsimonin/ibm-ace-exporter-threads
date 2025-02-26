@@ -12,23 +12,34 @@ metrics_handler = MetricsHandler()
 def process_server(server_data):
     server_details = api_client.fetch_uri(server_data['uri'])
     if server_details:
-        app_count = process_applications(server_details)
-        api_count = process_rest_apis(server_details)
-        metrics_handler.update_metrics(server_data['name'], app_count, api_count)
+        process_applications(server_details, server_data['name'])
 
-def process_applications(server_details):
+def process_applications(server_details, server_name):
     applications_uri = server_details['children']['applications']['uri']
     applications_data = api_client.fetch_uri(applications_uri)
     if applications_data:
-        return len(applications_data.get('children', []))
-    return 0
+        for app in applications_data.get('children', []):
+            app_details = api_client.fetch_uri(app['uri'])
+            if app_details:
+                process_message_flows(app_details, server_name, app['name'])
 
-def process_rest_apis(server_details):
-    rest_apis_uri = server_details['children']['restApis']['uri']
-    rest_apis_data = api_client.fetch_uri(rest_apis_uri)
-    if rest_apis_data:
-        return len(rest_apis_data.get('children', []))
-    return 0
+def process_message_flows(app_details, server_name, app_name):
+    message_flows_uri = app_details['children']['messageFlows']['uri']
+    message_flows_data = api_client.fetch_uri(message_flows_uri)
+    if message_flows_data:
+        for flow in message_flows_data.get('children', []):
+            flow_details = api_client.fetch_uri(flow['uri'])
+            if flow_details:
+                active_data = flow_details['active']
+                metrics_handler.update_thread_metrics(
+                    server_name,
+                    app_name,
+                    flow['name'],
+                    active_data.get('threads', 0),
+                    active_data.get('threadsCapacity', 0),
+                    active_data.get('threadsDemanded', 0),
+                    active_data.get('threadsInUse', 0)
+                )
 
 def update_metrics():
     while True:
